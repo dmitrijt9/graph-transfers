@@ -1,9 +1,9 @@
 <template>
   <div class="bg-white shadow overflow-hidden sm:rounded-lg">
     <div class="px-4 py-5 sm:px-6">
-      <h3 class="text-xl leading-6 font-medium text-gray-900">
+      <h2 class="text-2xl leading-6 font-medium text-indigo-500">
         {{ player.name }}
-      </h3>
+      </h2>
       <p class="mt-1 max-w-2xl text-sm text-gray-500">
         Basic info about the player.
       </p>
@@ -13,6 +13,10 @@
         <div class="sm:col-span-1">
           <dt class="text-sm font-medium text-gray-500">Full name</dt>
           <dd class="mt-1 text-sm text-gray-900">{{ player.name }}</dd>
+        </div>
+        <div class="sm:col-span-1">
+          <dt class="text-sm font-medium text-gray-500">Current Club</dt>
+          <dd class="mt-1 text-sm text-gray-900">{{ currentClub }}</dd>
         </div>
         <div class="sm:col-span-1">
           <dt class="text-sm font-medium text-gray-500">Age</dt>
@@ -33,7 +37,7 @@
             >
               <li
                 v-for="transfer in transfers"
-                :key="`${transfer.from} + ${transfer.to} + '${transfer.fee}'`"
+                :key="transfer.id"
                 class="pl-3 pr-4 py-3 grid grid-cols-1 gap-4 sm:grid-cols-5 text-sm"
               >
                 <span class="flex items-center">
@@ -46,12 +50,18 @@
                   {{ transfer.from }}
                 </span>
                 <span>
-                  <Icon name="arrow-narrow-right" class="h-6 w-6" />
+                  <Icon
+                    name="arrow-narrow-right"
+                    class="h-6 w-6 text-indigo-500"
+                  />
                 </span>
                 <span>
                   {{ transfer.to }}
                 </span>
-                <span> £{{ transfer.fee }} mil. </span>
+                <span v-if="transfer.fee !== 'Free'">
+                  £{{ transfer.fee }} mil.
+                </span>
+                <span v-else> {{ transfer.fee }} </span>
               </li>
             </ul>
           </dd>
@@ -71,6 +81,11 @@ export default {
     transfers: {
       type: Array,
       default: () => [],
+    },
+  },
+  computed: {
+    currentClub() {
+      return [...this.transfers].pop().to
     },
   },
 }

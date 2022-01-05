@@ -44,7 +44,10 @@
             <NuxtLink
               v-for="player in playerResults"
               :key="player.name"
-              :to="{ name: 'player-name', params: { name: player.name } }"
+              :to="{
+                name: 'player-name',
+                params: { name: player.name },
+              }"
               class="bg-gray-100 px-3 py-5 rounded-md hover:-translate-y-1 hover:shadow transition-all ease-linear duration-100"
             >
               {{ player.name }}, {{ player.position }}
@@ -117,6 +120,7 @@ export default {
         .filter((r) => r.labels[0] === 'Player')
         .map((p) => {
           return {
+            id: p.identity.toNumber(),
             name: p.properties.name,
             position: p.properties.position,
             age: p.properties.age.toNumber(),
@@ -126,6 +130,7 @@ export default {
         .filter((r) => r.labels[0] === 'Club')
         .map((c) => {
           return {
+            id: c.identity.toNumber(),
             name: c.properties.name,
             league: c.properties.league,
           }

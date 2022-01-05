@@ -1,60 +1,85 @@
 <template>
   <div class="my-8">
     <PlayerCard :player="player" :transfers="transfers" />
+    <related-players class="mt-8" :players="relatedPlayers" />
   </div>
 </template>
 
 <script>
 export default {
-  async asyncData({ params, $neo4j }) {
+  async asyncData({ params, $neo4j, error }) {
     // would be better have an API for neo4j queries...do not have time before deadline
     const records = await $neo4j.query(
-      `MATCH (p:Player { name: $playerName})-[r:INVOLVED_IN]->(t:Transfer) RETURN p,t ORDER BY t.season`,
+      `MATCH (p:Player { name: $playerName})-[:INVOLVED_IN]->(t:Transfer)
+      MATCH (relatedPlayer:Player)-[:INVOLVED_IN]->(:Transfer {club: t.club})
+      WITH p,t,relatedPlayer, size((relatedPlayer)-->(:Transfer {club: t.club})) AS count
+      WHERE count > 1
+      RETURN p,t,count, relatedPlayer
+      ORDER BY t.season
+      LIMIT 30`,
       {
         playerName: params.name,
       }
     )
 
-    const flatRecords = []
+    if (!records) {
+      error({
+        statusCode: 500,
+        message: 'Something went wrong. Contact the author.',
+      })
+
+      return
+    }
+
+    let playerRecord = null
+    const transferRecords = []
+    const relatedPlayersRecords = []
     records.forEach((r) => {
       const player = r.get('p')
       const transfer = r.get('t')
+      const relatedPlayer = r.get('relatedPlayer')
       if (player !== null) {
-        flatRecords.push(player)
+        playerRecord = {
+          id: player.identity.toNumber(),
+          name: player.properties.name,
+          position: player.properties.position,
+          age: player.properties.age.toNumber(),
+        }
       }
+
       if (transfer !== null) {
-        flatRecords.push(transfer)
+        const movement = transfer.properties.movement
+        transferRecords.push({
+          id: transfer.identity.toNumber(),
+          from:
+            movement === 'in'
+              ? transfer.properties.clubInvolved
+              : transfer.properties.club,
+          to:
+            movement === 'in'
+              ? transfer.properties.club
+              : transfer.properties.clubInvolved,
+          season: transfer.properties.season,
+          fee: transfer.properties.fee ?? 'Free',
+        })
+      }
+
+      if (relatedPlayer !== null) {
+        const count = r.get('count')
+        relatedPlayersRecords.push({
+          weight: count.toNumber(),
+          id: relatedPlayer.identity.toNumber(),
+          name: relatedPlayer.properties.name,
+          position: relatedPlayer.properties.position,
+          age: relatedPlayer.properties.age.toNumber(),
+        })
       }
     })
 
-    const player = flatRecords
-      .filter((r) => r.labels[0] === 'Player')
-      .map((p) => {
-        return {
-          name: p.properties.name,
-          position: p.properties.position,
-          age: p.properties.age.toNumber(),
-        }
-      })[0]
-
-    const transfers = flatRecords
-      .filter((r) => r.labels[0] === 'Transfer')
-      .map((t) => {
-        console.log(t)
-        const movement = t.properties.movement
-        return {
-          from:
-            movement === 'in' ? t.properties.clubInvolved : t.properties.club,
-          to: movement === 'in' ? t.properties.club : t.properties.clubInvolved,
-          season: t.properties.season,
-          fee: t.properties.fee ?? 'Free',
-        }
-      })
-      .sort((a, b) => a.season <= b.season)
-
     const deduplicatedTransfers = []
+    const deduplicatedRelatedPlayers = []
 
-    transfers.forEach((t) => {
+    transferRecords.forEach((t) => {
       const duplicate = deduplicatedTransfers.find(
         (d) => t.season === d.season && t.fee === d.fee
       )
@@ -62,10 +87,17 @@ export default {
         deduplicatedTransfers.push(t)
       }
     })
+    relatedPlayersRecords.forEach((rp) => {
+      const duplicate = deduplicatedRelatedPlayers.find((p) => p.id === rp.id)
+      if (!duplicate) {
+        deduplicatedRelatedPlayers.push(rp)
+      }
+    })
 
     return {
-      player,
-      transfers: deduplicatedTransfers,
+      player: playerRecord,
+      transfers: deduplicatedTransfers.sort((a, b) => a.season <= b.season),
+      relatedPlayers: deduplicatedRelatedPlayers,
     }
   },
 }
