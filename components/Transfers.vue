@@ -25,7 +25,7 @@
           <div
             class="shadow overflow-hidden border-b border-gray-200 sm:rounded-lg"
           >
-            <table class="min-w-full divide-y divide-gray-200">
+            <table class="min-w-full min-h-full divide-y divide-gray-200">
               <thead class="bg-gray-50">
                 <tr>
                   <th
@@ -58,7 +58,6 @@
                 </tr>
               </thead>
               <tbody>
-                <!-- Odd row -->
                 <tr
                   v-for="(t, i) in transfers"
                   :key="t.player + t.fee + t.club"
@@ -76,7 +75,7 @@
                     {{ t.movement === 'in' ? t.club : t.clubInvolved }}
                   </td>
                   <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {{ t.fee }}
+                    {{ t.fee !== null ? t.fee : 'Free' }}
                   </td>
                   <td
                     class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium"
@@ -96,6 +95,7 @@
         :limit="pagination.limit"
         :page="currentPage"
         class="mt-4"
+        @page="handlePage"
       />
     </div>
   </div>
@@ -112,15 +112,22 @@ export default {
       type: Object,
       required: true,
     },
+    loading: {
+      type: Boolean,
+      default: false,
+    },
   },
-  data() {
-    return {
-      currentPage: 1,
-    }
+  computed: {
+    currentPage() {
+      return this.pagination.skip / this.pagination.limit + 1
+    },
   },
   methods: {
     handleSeasonSelect(e) {
       this.$emit('season', e.target.value)
+    },
+    handlePage(page) {
+      this.$emit('page', page)
     },
   },
 }

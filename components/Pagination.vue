@@ -1,12 +1,12 @@
 <template>
-  <!-- This example requires Tailwind CSS v2.0+ -->
   <nav
     class="border-t border-gray-200 px-4 flex items-center justify-between sm:px-0"
   >
     <div class="-mt-px w-0 flex-1 flex">
-      <a
-        href="#"
-        class="border-t-2 border-transparent pt-4 pr-1 inline-flex items-center text-sm font-medium text-gray-500 hover:text-gray-700 hover:border-gray-300"
+      <button
+        class="border-t-2 border-transparent pt-4 pr-1 inline-flex items-center text-sm font-medium text-gray-700 hover:text-gray-900 hover:border-gray-300 disabled:text-gray-500 disabled:hover:border-transparent"
+        :disabled="page === 1"
+        @click="handleNav(page - 1)"
       >
         <!-- Heroicon name: solid/arrow-narrow-left -->
         <svg
@@ -23,57 +23,15 @@
           />
         </svg>
         Previous
-      </a>
+      </button>
     </div>
-    <div class="hidden md:-mt-px md:flex">
-      <a
-        href="#"
-        class="border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 border-t-2 pt-4 px-4 inline-flex items-center text-sm font-medium"
-      >
-        1
-      </a>
-      <!-- Current: "border-indigo-500 text-indigo-600", Default: "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300" -->
-      <a
-        href="#"
-        class="border-indigo-500 text-indigo-600 border-t-2 pt-4 px-4 inline-flex items-center text-sm font-medium"
-        aria-current="page"
-      >
-        2
-      </a>
-      <a
-        href="#"
-        class="border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 border-t-2 pt-4 px-4 inline-flex items-center text-sm font-medium"
-      >
-        3
-      </a>
-      <span
-        class="border-transparent text-gray-500 border-t-2 pt-4 px-4 inline-flex items-center text-sm font-medium"
-      >
-        ...
-      </span>
-      <a
-        href="#"
-        class="border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 border-t-2 pt-4 px-4 inline-flex items-center text-sm font-medium"
-      >
-        8
-      </a>
-      <a
-        href="#"
-        class="border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 border-t-2 pt-4 px-4 inline-flex items-center text-sm font-medium"
-      >
-        9
-      </a>
-      <a
-        href="#"
-        class="border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 border-t-2 pt-4 px-4 inline-flex items-center text-sm font-medium"
-      >
-        10
-      </a>
-    </div>
+    <div class="md:-mt-px md:flex">{{ page }} of {{ lastPage }}</div>
     <div class="-mt-px w-0 flex-1 flex justify-end">
-      <a
+      <button
         href="#"
-        class="border-t-2 border-transparent pt-4 pl-1 inline-flex items-center text-sm font-medium text-gray-500 hover:text-gray-700 hover:border-gray-300"
+        class="border-t-2 border-transparent pt-4 pl-1 inline-flex items-center text-sm font-medium text-gray-700 hover:text-gray-900 hover:border-gray-300 disabled:text-gray-500 disabled:hover:border-transparent"
+        :disabled="page === lastPage"
+        @click="handleNav(page + 1)"
       >
         Next
         <!-- Heroicon name: solid/arrow-narrow-right -->
@@ -90,7 +48,7 @@
             clip-rule="evenodd"
           />
         </svg>
-      </a>
+      </button>
     </div>
   </nav>
 </template>
@@ -110,6 +68,16 @@ export default {
     limit: {
       type: Number,
       required: true,
+    },
+  },
+  computed: {
+    lastPage() {
+      return Math.ceil(this.total / this.limit)
+    },
+  },
+  methods: {
+    handleNav(page) {
+      this.$emit('page', page)
     },
   },
 }

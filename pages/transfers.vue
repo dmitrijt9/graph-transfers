@@ -3,9 +3,11 @@
     <h1 class="text-2xl">All transfers</h1>
     <Transfers
       class="mt-4"
+      :loading="$fetchState.pending"
       :transfers="transfers"
       :pagination="pagination"
       @season="handleSeason"
+      @page="handlePage"
     />
   </div>
 </template>
@@ -13,11 +15,6 @@
 <script>
 import { int } from 'neo4j-driver'
 export default {
-  // async asyncData() {
-  //   return {
-  //     transfers: await this.fetchTransfers()
-  //   }
-  // },
   data() {
     return {
       pagination: {
@@ -28,11 +25,26 @@ export default {
           season: '2020/2021',
         },
       },
+      transfers: [],
     }
+  },
+  async fetch() {
+    this.transfers = await this.fetchTransfers()
+  },
+  watch: {
+    pagination: {
+      deep: true,
+      handler(n) {
+        this.$fetch()
+      },
+    },
   },
   methods: {
     handleSeason(season) {
       this.pagination.filter.season = season
+    },
+    handlePage(page) {
+      this.pagination.skip = (page - 1) * this.pagination.limit
     },
     async fetchTransfers() {
       // would be better have an API for neo4j queries...do not have time before deadline
@@ -50,7 +62,10 @@ export default {
         }
       )
 
-      this.pagination.total = int(records[0].get('total')).toNumber()
+      const total = int(records[0].get('total')).toNumber()
+      if (this.pagination.total !== total) {
+        this.pagination.total = total
+      }
 
       return records.map((r) => {
         return {
