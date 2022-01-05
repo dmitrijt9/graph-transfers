@@ -15,7 +15,7 @@
           activity in top European football leagues.
         </p>
         <div class="mt-5 max-w-md mx-auto sm:flex sm:justify-center md:mt-8">
-          <form class="w-full sm:mx-auto lg:mx-0" @submit.prevent="search">
+          <form class="w-full sm:mx-auto lg:mx-0" @submit.prevent>
             <div class="sm:flex">
               <div class="min-w-0 flex-1">
                 <label for="query" class="sr-only">Search</label>
@@ -23,18 +23,20 @@
                   id="query"
                   v-model="searchQuery"
                   type="text"
-                  placeholder="Search a player or a team"
+                  placeholder="Start typing to search a player or a team"
+                  autocomplete="off"
                   class="block w-full shadow px-4 py-3 rounded-md border-0 text-base text-black placeholder-gray-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-300 focus:ring-offset-gray-900"
+                  @input="handleSearch"
                 />
               </div>
-              <div class="mt-3 sm:mt-0 sm:ml-3">
+              <!-- <div class="mt-3 sm:mt-0 sm:ml-3">
                 <button
                   type="submit"
                   class="block w-full py-3 px-4 rounded-md shadow bg-indigo-500 text-white font-medium hover:bg-indigo-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-300 focus:ring-offset-gray-900"
                 >
                   Search
                 </button>
-              </div>
+              </div> -->
             </div>
           </form>
         </div>
@@ -89,33 +91,47 @@ export default {
       return this.playerResults.length || this.clubResults.length
     },
   },
+  watch: {
+    searchQuery(n) {
+      if (n !== '') {
+        this.noResult = true
+      } else {
+        this.noResult = false
+      }
+    },
+  },
   methods: {
+    handleSearch() {
+      setTimeout(this.search, 400)
+    },
     async search() {
       this.loading = true
       // would be better have an API for neo4j queries...do not have time before deadline
-      const records = await this.$neo4j.query(
+      const playerRecords = await this.$neo4j.query(
         `
-          OPTIONAL MATCH (p:Player) WHERE apoc.text.levenshteinSimilarity(p.name, $query) > 0.3 
-          OPTIONAL MATCH (c:Club) WHERE apoc.text.levenshteinSimilarity(c.name, $query) > 0.5
-          RETURN DISTINCT c, p 
-          LIMIT 10
+          MATCH (p:Player) WHERE apoc.text.sorensenDiceSimilarity(p.name, $query) > 0.4
+          RETURN p
+          ORDER BY apoc.text.sorensenDiceSimilarity(p.name, $query) DESC
+          LIMIT 5
         `,
         {
           query: this.searchQuery,
         }
       )
-      const flatRecords = []
-      records.forEach((r) => {
-        const player = r.get('p')
-        const club = r.get('c')
-        if (player !== null) {
-          flatRecords.push(player)
+      const clubRecords = await this.$neo4j.query(
+        `
+          MATCH (c:Club) WHERE apoc.text.sorensenDiceSimilarity(c.name, $query) > 0.4
+          RETURN c
+          ORDER BY apoc.text.sorensenDiceSimilarity(c.name, $query) DESC
+          LIMIT 5
+        `,
+        {
+          query: this.searchQuery,
         }
-        if (club !== null) {
-          flatRecords.push(club)
-        }
-      })
-      this.playerResults = flatRecords
+      )
+
+      this.playerResults = playerRecords
+        .map((pr) => pr.get('p'))
         .filter((r) => r.labels[0] === 'Player')
         .map((p) => {
           return {
@@ -125,7 +141,8 @@ export default {
             age: p.properties.age.toNumber(),
           }
         })
-      this.clubResults = flatRecords
+      this.clubResults = clubRecords
+        .map((cr) => cr.get('c'))
         .filter((r) => r.labels[0] === 'Club')
         .map((c) => {
           return {
@@ -135,9 +152,6 @@ export default {
           }
         })
       this.loading = false
-      if (!this.isResult) {
-        this.noResult = true
-      }
     },
   },
 }
