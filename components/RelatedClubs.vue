@@ -10,7 +10,7 @@
         v-for="club in clubs"
         :key="club.id"
         :to="{ name: 'club-name', params: { name: club.name } }"
-        class="snap-start scroll-mx-2 shrink-0 max-w-sm bg-gray-100 p-4 shadow rounded-md flex flex-col gap-2 hover:shadow-md hover:-translate-y-1 transition-all duration-100 ease-linear"
+        class="my-4 snap-start scroll-mx-2 shrink-0 max-w-sm bg-gray-100 p-4 shadow rounded-md flex flex-col gap-2 hover:shadow-md hover:-translate-y-1 transition-all duration-100 ease-linear"
       >
         <div class="text-lg text-indigo-500 font-semibold">
           {{ club.name }}

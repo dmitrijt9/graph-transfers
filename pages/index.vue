@@ -1,6 +1,6 @@
 <template>
   <div>
-    <main class="mt-16 mx-auto max-w-7xl px-4 sm:mt-24">
+    <main class="mt-16 mb-8 mx-auto max-w-7xl px-4 sm:mt-24">
       <div class="text-center">
         <h1
           class="text-4xl tracking-tight font-extrabold text-gray-900 sm:text-5xl md:text-6xl"
@@ -25,18 +25,10 @@
                   type="text"
                   placeholder="Start typing to search a player or a team"
                   autocomplete="off"
-                  class="block w-full shadow px-4 py-3 rounded-md border-0 text-base text-black placeholder-gray-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-300 focus:ring-offset-gray-900"
+                  class="block w-full shadow px-4 py-3 bg-gray-100 rounded-md border-0 text-base text-black placeholder-gray-800 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-indigo-300 focus:ring-offset-indigo-500"
                   @input="handleSearch"
                 />
               </div>
-              <!-- <div class="mt-3 sm:mt-0 sm:ml-3">
-                <button
-                  type="submit"
-                  class="block w-full py-3 px-4 rounded-md shadow bg-indigo-500 text-white font-medium hover:bg-indigo-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-300 focus:ring-offset-gray-900"
-                >
-                  Search
-                </button>
-              </div> -->
             </div>
           </form>
         </div>
@@ -61,7 +53,10 @@
             <NuxtLink
               v-for="club in clubResults"
               :key="club.name"
-              to="/"
+              :to="{
+                name: 'club-name',
+                params: { name: club.name },
+              }"
               class="bg-gray-100 px-3 py-5 rounded-md hover:-translate-y-1 hover:shadow transition-all ease-linear duration-100"
             >
               {{ club.name }}, {{ club.league }}
