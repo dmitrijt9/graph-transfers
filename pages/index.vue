@@ -92,17 +92,16 @@ export default {
   methods: {
     async search() {
       this.loading = true
-      const query =
-        this.searchQuery.charAt(0).toUpperCase() + this.searchQuery.slice(1)
       // would be better have an API for neo4j queries...do not have time before deadline
       const records = await this.$neo4j.query(
         `
-          OPTIONAL MATCH (p:Player) WHERE p.name CONTAINS $query 
-          OPTIONAL MATCH (c:Club) WHERE c.name CONTAINS $query
-          RETURN c, p LIMIT 10
+          OPTIONAL MATCH (p:Player) WHERE apoc.text.levenshteinSimilarity(p.name, $query) > 0.3 
+          OPTIONAL MATCH (c:Club) WHERE apoc.text.levenshteinSimilarity(c.name, $query) > 0.5
+          RETURN DISTINCT c, p 
+          LIMIT 10
         `,
         {
-          query,
+          query: this.searchQuery,
         }
       )
       const flatRecords = []

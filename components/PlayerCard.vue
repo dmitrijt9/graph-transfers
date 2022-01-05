@@ -85,7 +85,7 @@ export default {
   },
   computed: {
     currentClub() {
-      return [...this.transfers].pop().to
+      return this.transfers[0].to
     },
   },
 }

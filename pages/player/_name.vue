@@ -1,7 +1,8 @@
 <template>
-  <div class="my-8">
+  <div class="mt-8 mb-16">
     <PlayerCard :player="player" :transfers="transfers" />
     <related-players class="mt-8" :players="relatedPlayers" />
+    <related-clubs class="mt-8" :clubs="relatedClubs" />
   </div>
 </template>
 
@@ -11,12 +12,18 @@ export default {
     // would be better have an API for neo4j queries...do not have time before deadline
     const records = await $neo4j.query(
       `MATCH (p:Player { name: $playerName})-[:INVOLVED_IN]->(t:Transfer)
-      MATCH (relatedPlayer:Player)-[:INVOLVED_IN]->(:Transfer {club: t.club})
-      WITH p,t,relatedPlayer, size((relatedPlayer)-->(:Transfer {club: t.club})) AS count
-      WHERE count > 1
-      RETURN p,t,count, relatedPlayer
-      ORDER BY t.season
-      LIMIT 30`,
+      MATCH (relatedClub:Club { name: t.club })
+      CALL {
+        WITH t,p
+        MATCH (relatedPlayer:Player)--(:Club {name: t.club})
+        WITH t,size((relatedPlayer)--(:Club {name: t.club})) AS relatedPlayerCount,relatedPlayer
+        WHERE apoc.text.levenshteinSimilarity(p.position, relatedPlayer.position) > 0.4 AND ID(relatedPlayer) <> ID(p)
+        RETURN relatedPlayerCount,relatedPlayer
+        ORDER BY relatedPlayerCount DESC
+      }
+      WITH relatedClub,p,t,relatedPlayer,relatedPlayerCount
+      RETURN p,t,relatedPlayerCount,relatedPlayer,relatedClub
+      ORDER BY t.season DESC`,
       {
         playerName: params.name,
       }
@@ -34,10 +41,13 @@ export default {
     let playerRecord = null
     const transferRecords = []
     const relatedPlayersRecords = []
+    const relatedClubsRecords = []
     records.forEach((r) => {
       const player = r.get('p')
       const transfer = r.get('t')
       const relatedPlayer = r.get('relatedPlayer')
+      const relatedClub = r.get('relatedClub')
+
       if (player !== null) {
         playerRecord = {
           id: player.identity.toNumber(),
@@ -65,7 +75,7 @@ export default {
       }
 
       if (relatedPlayer !== null) {
-        const count = r.get('count')
+        const count = r.get('relatedPlayerCount')
         relatedPlayersRecords.push({
           weight: count.toNumber(),
           id: relatedPlayer.identity.toNumber(),
@@ -74,10 +84,19 @@ export default {
           age: relatedPlayer.properties.age.toNumber(),
         })
       }
+
+      if (relatedClub !== null) {
+        relatedClubsRecords.push({
+          id: relatedClub.identity.toNumber(),
+          name: relatedClub.properties.name,
+          league: relatedClub.properties.league,
+        })
+      }
     })
 
     const deduplicatedTransfers = []
     const deduplicatedRelatedPlayers = []
+    const deduplicatedRelatedClubs = []
 
     transferRecords.forEach((t) => {
       const duplicate = deduplicatedTransfers.find(
@@ -93,11 +112,18 @@ export default {
         deduplicatedRelatedPlayers.push(rp)
       }
     })
+    relatedClubsRecords.forEach((rc) => {
+      const duplicate = deduplicatedRelatedClubs.find((c) => c.id === rc.id)
+      if (!duplicate) {
+        deduplicatedRelatedClubs.push(rc)
+      }
+    })
 
     return {
       player: playerRecord,
-      transfers: deduplicatedTransfers.sort((a, b) => a.season <= b.season),
+      transfers: deduplicatedTransfers,
       relatedPlayers: deduplicatedRelatedPlayers,
+      relatedClubs: deduplicatedRelatedClubs,
     }
   },
 }
